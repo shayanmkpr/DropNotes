@@ -5,15 +5,16 @@ import (
 
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/driver/desktop"
+  "fyne.io/fyne/v2/theme"
 )
 
 func main() {
 	myApp := app.New()
-	myApp.SetIcon(nil)
+	myApp.SetIcon(theme.Icon(theme.IconNameConfirm))
 
-	todoApp := &utils.TodoApp{
+	todoApp := &utils.NoteApp{
 		App:   myApp,
-		Todos: []string{"Sample Todo - Click to remove"},
+		Notes: []string{"Drop Down Notes"},
 	}
 
 	if desk, ok := myApp.(desktop.App); ok {
