@@ -1,10 +1,15 @@
 package utils
 
 import (
+	"encoding/json"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/widget"
+	// "fyne.io/fyne/v2/storage"
 )
 
 type NoteApp struct {
@@ -14,11 +19,52 @@ type NoteApp struct {
 
 const LineSizeThreshold = 100
 
+// Get the file path for storing notes
+func getNotesFilePath() string {
+	homeDir, _ := os.UserHomeDir()
+	return filepath.Join(homeDir, ".drop_notes.json")
+}
+
+// Load notes from file
+func (t *NoteApp) LoadNotes() error {
+	filePath := getNotesFilePath()
+	
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		// File doesn't exist, start with empty notes
+		t.Notes = []string{}
+		return nil
+	}
+	
+	// Read file
+	data, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+	
+	// Unmarshal JSON
+	return json.Unmarshal(data, &t.Notes)
+}
+
+// Save notes to file
+func (t *NoteApp) SaveNotes() error {
+	filePath := getNotesFilePath()
+	
+	// Marshal to JSON
+	data, err := json.MarshalIndent(t.Notes, "", "  ")
+	if err != nil {
+		return err
+	}
+	
+	// Write to file
+	return ioutil.WriteFile(filePath, data, 0644)
+}
+
 func (t *NoteApp) CreateMenu() *fyne.Menu {
 	var items []*fyne.MenuItem
 
 	for i, note := range t.Notes {
-		noteText :=note 
+		noteText := note
 		index := i
 		item := fyne.NewMenuItem(noteText, func() {
 			t.RemoveNote(index)
@@ -35,9 +81,20 @@ func (t *NoteApp) CreateMenu() *fyne.Menu {
 	})
 	items = append(items, addItem)
 
+	// Add quick option to add from clipboard
+	clipboardItem := fyne.NewMenuItem("Add from Clipboard", func() {
+		clipboard := fyne.CurrentApp().Driver().AllWindows()[0].Clipboard()
+		clipText := clipboard.Content()
+		if clipText != "" {
+			t.AddNote(clipText)
+		}
+	})
+	items = append(items, clipboardItem)
+
 	items = append(items, fyne.NewMenuItemSeparator())
 	quitItem := fyne.NewMenuItem("Quit", func() {
-		t.App.Quit() // There is a problem here.
+		// Use os.Exit instead of App.Quit() for system tray apps
+		os.Exit(0)
 	})
 	items = append(items, quitItem)
 
@@ -53,73 +110,56 @@ func (t *NoteApp) UpdateSystemTray() {
 
 func (t *NoteApp) AddNote(text string) {
 	if text != "" {
-    if len(text) > LineSizeThreshold {
-      for i := 0; i < len(text); i += LineSizeThreshold {
-        if i + LineSizeThreshold <= len(text) {
-          t.Notes = append(t.Notes, text[i: i + LineSizeThreshold])
-        } else {
-          t.Notes = append(t.Notes, text[i:])
-        }
-      }
-    } else {
-      t.Notes = append(t.Notes, text)
-    }
-    t.UpdateSystemTray()
-  }
-}
-
-func (t *NoteApp) RemoveNote(index int) {
-	if index > 0 && index < len(t.Notes) {
-		t.Notes = append(t.Notes[:index], t.Notes[index+1:]...)
+		if len(text) > LineSizeThreshold {
+			for i := 0; i < len(text); i += LineSizeThreshold {
+				if i+LineSizeThreshold <= len(text) {
+					t.Notes = append(t.Notes, text[i:i+LineSizeThreshold])
+				} else {
+					t.Notes = append(t.Notes, text[i:])
+				}
+			}
+		} else {
+			t.Notes = append(t.Notes, text)
+		}
+		t.SaveNotes() // Save after adding
 		t.UpdateSystemTray()
 	}
 }
 
-func (t *NoteApp) TrimNote(note string) []string {
-  var chopped_note []string
-  for i := 0; i <= len(note); i += LineSizeThreshold{
-    end := i + LineSizeThreshold
-    start := i
-    if end > len(note){
-      end = len(note)
-    }
-    chopped_note = append(chopped_note, note[start: end])
-  }
-  return chopped_note
+func (t *NoteApp) RemoveNote(index int) {
+	// Fixed: should be >= 0, not > 0
+	if index >= 0 && index < len(t.Notes) {
+		t.Notes = append(t.Notes[:index], t.Notes[index+1:]...)
+		t.SaveNotes() // Save after removing
+		t.UpdateSystemTray()
+	}
 }
 
 func (t *NoteApp) ShowAddWindow() {
-	w := t.App.NewWindow("Add")
-	w.Resize(fyne.NewSize(350, 120))
+	// Create a very small, minimal window
+	w := t.App.NewWindow("")
+	w.Resize(fyne.NewSize(300, 80))
+	w.SetFixedSize(true)
 
 	entry := widget.NewEntry()
-	entry.SetPlaceHolder("Add Item")
-
-	addBtn := widget.NewButton("Add", func() {
-		t.AddNote(entry.Text)
-		w.Close()
-	})
-
-	cancelBtn := widget.NewButton("Cancel", func() {
-		w.Close()
-	})
+	entry.SetPlaceHolder("Type note and press Enter...")
 
 	entry.OnSubmitted = func(text string) {
 		t.AddNote(text)
 		w.Close()
 	}
 
-	buttons := container.NewHBox(addBtn, cancelBtn)
-	content := container.NewVBox(
-		widget.NewLabel("Add a new note:"),
-		entry,
-		buttons,
-	)
+	// Just the entry field, no buttons - cleaner
+	content := container.NewVBox(entry)
 
 	w.SetContent(content)
 	w.CenterOnScreen()
 	w.Show()
 
 	w.Canvas().Focus(entry)
+	
+	// Auto-close if user clicks away (focus lost)
+	w.SetOnClosed(func() {
+		// Window closed
+	})
 }
-
