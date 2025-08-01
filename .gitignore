@@ -1,0 +1,16 @@
+# Ignore binaries
+drop_notes*
+
+# Ignore editor/OS files
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Ignore dependency directories (if any)
+vendor/
+
+# Ignore compiled objects (just in case)
+*.o
+*.out
+*.exe

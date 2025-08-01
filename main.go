@@ -1,33 +1,34 @@
 package main
 
 import (
-	// "fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/driver/desktop"
-	"drop_notes/utils" // Adjust this path to match your project structure
+	"fyne.io/fyne/v2/theme"
+
+	"drop_notes/utils"
 )
 
 func main() {
+	// Create and initialize the application
 	myApp := app.New()
-	myApp.SetIcon(nil)
-	
+	myApp.SetIcon(theme.Icon(theme.IconNameConfirm))
+
+	// Create note app instance
 	noteApp := &utils.NoteApp{
 		App:   myApp,
 		Notes: []string{},
 	}
-	
-	// Load existing notes from file
-	err := noteApp.LoadNotes()
-	if err != nil {
-		// If loading fails, just start with empty notes
+
+	// Load existing notes or start fresh
+	if err := noteApp.HandleNotes("load", "", 0); err != nil {
 		noteApp.Notes = []string{}
 	}
-	
-	// Set up system tray
-	if desk, ok := myApp.(desktop.App); ok {
-		menu := noteApp.CreateMenu()
-		desk.SetSystemTrayMenu(menu)
+
+	// Initialize system tray if available
+	if _, ok := myApp.(desktop.App); ok {
+		noteApp.UpdateUI()
 	}
-	
+
+	// Start the application
 	myApp.Run()
 }

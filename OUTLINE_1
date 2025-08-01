@@ -1,0 +1,10 @@
+ 𝓢 NoteApp
+   LineSizeThreshold
+   getNotesFilePath
+  ƒ (*NoteApp).LoadNotes
+  ƒ (*NoteApp).SaveNotes
+  ƒ (*NoteApp).CreateMenu
+  ƒ (*NoteApp).UpdateSystemTray
+  ƒ (*NoteApp).AddNote
+  ƒ (*NoteApp).RemoveNote
+  ƒ (*NoteApp).ShowAddWindow
