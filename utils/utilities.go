@@ -12,31 +12,55 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+type MyNote struct {
+	Text string
+	Index int
+	Status bool
+}
 // NoteApp represents the main application structure
 type NoteApp struct {
 	App   fyne.App    // The Fyne application instance
-	Notes []string    // Slice containing all notes
+	Notes *[]MyNote   // List of notes
 }
 
 const LineSizeThreshold = 100 // Maximum length of a single note before splitting
-
 // HandleNotes manages all note operations (loading, saving, adding, removing)
 func (t *NoteApp) HandleNotes(operation string, noteText string, index int) error {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-				fmt.Println(err)
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+			fmt.Println(err)
+	}
+	folderPath := filepath.Join(homeDir, "/.drop_notes")
+	// check if the folder is there. if it wasnt, then make it.
+	// everything is going to be there.
+	if _, err := os.Stat(folderPath); err != nil {
+		if os.IsNotExist(err) {
+			fmt.Println("~/.drop_notes folder does note exist. Creating one.")
+			err := os.Mkdir(folderPath, 0755)
+			if err != nil {
+				println(err)
+			} else {
+				println("Folder created:", folderPath)
+			}
 		}
-		filePath := filepath.Join(homeDir, ".drop_notes.json")
-
-    // filePath := filepath.Join(os.UserHomeDir(), ".drop_notes.json")
+	}
+	filePath := filepath.Join(folderPath, ".drop_notes.json")
+	// check if the json file is there.
+	// if not, then make it so we can write it.
+	if _, err := os.Stat(filePath); err != nil {
+		if os.IsNotExist(err) {
+			fmt.Println("~/.drop_notes.json file does note exist. Creating one.")
+			_, err := os.Create(filePath)
+			if err != nil {
+				println(err)
+			} else {
+				println("File created:", filePath)
+			}
+		}
+	}
     switch operation {
     case "load":
-        // If file doesn't exist, start with empty notes
-        if _, err := os.Stat(filePath); os.IsNotExist(err) {
-            t.Notes = []string{}
-            return nil
-        }
-        
+
         // Read and parse existing notes
         data, err := ioutil.ReadFile(filePath)
         if err != nil {
@@ -62,10 +86,15 @@ func (t *NoteApp) HandleNotes(operation string, noteText string, index int) erro
                     if end > len(noteText) {
                         end = len(noteText)
                     }
-                    t.Notes = append(t.Notes, noteText[i:end])
+					newNote := MyNote{
+						Text: noteText[i:end],
+						Index: len(t.Notes),
+						Status: false,
+					}
+                    *t.Notes = append(*t.Notes, newNote)
                 }
             } else {
-                t.Notes = append(t.Notes, noteText)
+                *t.Notes = append(*t.Notes, noteText)
             }
             t.HandleNotes("save", "", 0)
             t.UpdateUI()
@@ -74,7 +103,7 @@ func (t *NoteApp) HandleNotes(operation string, noteText string, index int) erro
     case "remove":
         // Remove note at specified index
         if index >= 0 && index < len(t.Notes) {
-            t.Notes = append(t.Notes[:index], t.Notes[index+1:]...)
+            *t.Notes = append(*t.Notes[:index], *t.Notes[index+1:]...)
             t.HandleNotes("save", "", 0)
             t.UpdateUI()
         }
@@ -89,8 +118,8 @@ func (t *NoteApp) UpdateUI() {
     
     // Add existing notes
     for i, note := range t.Notes {
-        noteIndex := i
-        menuItems = append(menuItems, fyne.NewMenuItem(note, func() {
+        noteIndex := note.Index
+        menuItems = append(menuItems, fyne.NewMenuItem(note.Text, func() {
             t.HandleNotes("remove", "", noteIndex)
         }))
     }
