@@ -103,7 +103,20 @@ func (t *NoteApp) HandleNotes(operation string, noteText string, index int) erro
             t.HandleNotes("save", "", 0)
             t.UpdateUI()
         }
+	case "done":
+		if index >= 0 && index < len(t.Notes) {
+			t.Notes[index].Status = true
+			t.HandleNotes("save", "", 0)
+			t.UpdateUI()
+		}
         
+	case "undone":
+		if index >= 0 && index < len(t.Notes) {
+			t.Notes[index].Status = false
+			t.HandleNotes("save", "", 0)
+			t.UpdateUI()
+		}
+
     case "remove":
         // Remove note at specified index
         if index >= 0 && index < len(t.Notes) {
@@ -118,14 +131,36 @@ func (t *NoteApp) HandleNotes(operation string, noteText string, index int) erro
 // UpdateUI handles all UI-related operations (system tray menu and add window)
 func (t *NoteApp) UpdateUI() {
     // Create menu items for each note
+
     var menuItems []*fyne.MenuItem
+    // var doneItem []*fyne.MenuItem
     
     // Add existing notes
     for i, note := range t.Notes {
         noteIndex := i
-        menuItems = append(menuItems, fyne.NewMenuItem(note.Text, func() {
-            t.HandleNotes("remove", "", noteIndex)
-        }))
+		// adding the items that are already done:
+		if note.Status == true{
+
+			menuItems = append(menuItems, fyne.NewMenuItem("[x]"+note.Text, func() {
+				t.HandleNotes("undone", "", noteIndex)
+			}))
+			// doneItem = append(doneItem, fyne.NewMenuItem("[x]"+note.Text, func(){ // a method to handle the changes that happen after making the check box toggle
+			// 	t.HandleNotes("remove", "", noteIndex)
+			// 	// t.Notes[noteIndex].Status = !t.Notes[noteIndex].Status // Toggle
+			// 	// t.HandleNotes("save", "", 0)
+			// 	// t.UpdateUI()
+			// }))
+
+		} else {
+
+			menuItems = append(menuItems, fyne.NewMenuItem("[ ]"+note.Text, func() {
+				t.HandleNotes("done", "", noteIndex)
+			}))
+
+		}
+		//
+		// menuItems = append(menuItems, doneItem...)
+
     }
     
     // Add separator if there are notes
@@ -135,6 +170,7 @@ func (t *NoteApp) UpdateUI() {
     
     // Add utility menu items
     menuItems = append(menuItems,
+        fyne.NewMenuItem("Remove all Done", t.removeDoneItems),
         fyne.NewMenuItem("Add Note...", t.showAddNoteWindow),
         fyne.NewMenuItem("Add from Clipboard", func() {
             if clipText := t.App.Driver().AllWindows()[0].Clipboard().Content(); clipText != "" {
@@ -168,4 +204,40 @@ func (t *NoteApp) showAddNoteWindow() {
     w.CenterOnScreen()
     w.Show()
     w.Canvas().Focus(entry)
+}
+
+func (t *NoteApp) showConfirmWindow() bool {
+    w := t.App.NewWindow("Confirm")
+    w.Resize(fyne.NewSize(200, 100))
+	w.SetFixedSize(true)
+
+    label := widget.NewLabel("Are you sure?")
+	var result bool
+
+    yesButton := widget.NewButton("Yes", func() {
+        result = false
+        w.Close()
+    })
+
+    noButton := widget.NewButton("No", func() {
+        result = true
+        w.Close()
+    })
+
+    w.SetContent(container.NewVBox(label, container.NewHBox(yesButton, noButton)))
+    w.CenterOnScreen()
+    w.Show()
+
+    return result // Wait for the user's choice
+}
+
+func (t *NoteApp) removeDoneItems() {
+	confirm := t.showConfirmWindow()
+	if !confirm {
+		for i, note := range(t.Notes){
+			if note.Status == true{
+				t.HandleNotes("remove", "", i)
+			}
+		}
+	}
 }
