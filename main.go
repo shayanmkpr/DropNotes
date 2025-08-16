@@ -16,12 +16,12 @@ func main() {
 	// Create note app instance
 	noteApp := &utils.NoteApp{
 		App:   myApp,
-		Notes: []string{},
+		Notes: []utils.MyNote{},
 	}
 
 	// Load existing notes or start fresh
 	if err := noteApp.HandleNotes("load", "", 0); err != nil {
-		noteApp.Notes = []string{}
+		noteApp.Notes = []utils.MyNote{}  // Changed from []string{} to []utils.MyNote{}
 	}
 
 	// Initialize system tray if available

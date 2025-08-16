@@ -14,13 +14,12 @@ import (
 
 type MyNote struct {
 	Text string
-	Index int
 	Status bool
 }
-// NoteApp represents the main application structure
+
 type NoteApp struct {
 	App   fyne.App    // The Fyne application instance
-	Notes *[]MyNote   // List of notes
+	Notes []MyNote    // Slice containing all notes
 }
 
 const LineSizeThreshold = 100 // Maximum length of a single note before splitting
@@ -79,6 +78,8 @@ func (t *NoteApp) HandleNotes(operation string, noteText string, index int) erro
     case "add":
         // Add new note, splitting if it exceeds threshold
         if noteText != "" {
+
+
             if len(noteText) > LineSizeThreshold {
                 // Split long notes into smaller chunks
                 for i := 0; i < len(noteText); i += LineSizeThreshold {
@@ -88,13 +89,16 @@ func (t *NoteApp) HandleNotes(operation string, noteText string, index int) erro
                     }
 					newNote := MyNote{
 						Text: noteText[i:end],
-						Index: len(t.Notes),
 						Status: false,
 					}
-                    *t.Notes = append(*t.Notes, newNote)
+                    t.Notes = append(t.Notes, newNote)
                 }
             } else {
-                *t.Notes = append(*t.Notes, noteText)
+				newNote := MyNote{
+					Text: noteText,
+					Status: false,
+				}
+                t.Notes = append(t.Notes, newNote)
             }
             t.HandleNotes("save", "", 0)
             t.UpdateUI()
@@ -103,7 +107,7 @@ func (t *NoteApp) HandleNotes(operation string, noteText string, index int) erro
     case "remove":
         // Remove note at specified index
         if index >= 0 && index < len(t.Notes) {
-            *t.Notes = append(*t.Notes[:index], *t.Notes[index+1:]...)
+            t.Notes = append(t.Notes[:index], t.Notes[index+1:]...)
             t.HandleNotes("save", "", 0)
             t.UpdateUI()
         }
@@ -118,7 +122,7 @@ func (t *NoteApp) UpdateUI() {
     
     // Add existing notes
     for i, note := range t.Notes {
-        noteIndex := note.Index
+        noteIndex := i
         menuItems = append(menuItems, fyne.NewMenuItem(note.Text, func() {
             t.HandleNotes("remove", "", noteIndex)
         }))
