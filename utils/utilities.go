@@ -214,17 +214,15 @@ func showConfirmWindow(t *NoteApp, callback func(bool)) {
     label := widget.NewLabel("Are you sure?")
     
     yesButton := widget.NewButton("Yes", func() {
-        fmt.Printf("Yes clicked\n")
         callback(true)  // <- This replaces "result = true; return result"
         w.Close()
     })
     
     noButton := widget.NewButton("No", func() {
-        fmt.Printf("No clicked\n")
         callback(false) // <- This replaces "result = false; return result"
         w.Close()
     })
-    
+
     w.SetOnClosed(func() {
 		callback(false)
     })
@@ -239,17 +237,14 @@ func (t *NoteApp) removeDoneItems() {
     // Pass a function that contains "what to do when user responds"
     showConfirmWindow(t, func(confirm bool) {
         // This code runs LATER when user clicks a button
-        fmt.Printf("%t 1 \n", confirm)
         
         if confirm == true {
-            fmt.Printf("User confirmed, removing items\n")
             for i, note := range(t.Notes){
                 if note.Status == true{
                     t.HandleNotes("remove", "", i)
                 }
             }
         } else {
-            fmt.Printf("%t 2 - User cancelled\n", confirm)
         }
     })
     fmt.Println("Dialog shown, removeDoneItems() function ending")
